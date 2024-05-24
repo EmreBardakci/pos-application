@@ -1,8 +1,11 @@
-import { useEffect, useState } from "react";
+import { useState, useEffect } from "react";
 import Header from "../components/header/Header.jsx";
 import StatisticCard from "../components/statistics/StatisticCard.jsx";
-import { Pie, Line } from "@ant-design/plots";
 import { Spin } from "antd";
+import { Line, Pie } from "react-chartjs-2";
+import "chart.js/auto";
+import ChartDataLabels from "chartjs-plugin-datalabels";
+
 const StatisticPage = () => {
   const [data, setData] = useState();
   const [products, setProducts] = useState([]);
@@ -11,6 +14,7 @@ const StatisticPage = () => {
   useEffect(() => {
     asyncFetch();
   }, []);
+
   useEffect(() => {
     const getProducts = async () => {
       try {
@@ -23,8 +27,10 @@ const StatisticPage = () => {
         console.log(error);
       }
     };
+
     getProducts();
   }, []);
+
   const asyncFetch = () => {
     fetch(process.env.REACT_APP_SERVER_URL + "/api/bills/get-all")
       .then((response) => response.json())
@@ -33,60 +39,77 @@ const StatisticPage = () => {
         console.log("fetch data failed", error);
       });
   };
-  const config = {
-    data,
-    xField: "customerName",
-    yField: "subTotal",
-    point: {
-      shapeField: "square",
-      sizeField: 4,
-    },
-    interaction: {
-      tooltip: {
-        marker: false,
-      },
-    },
-    style: {
-      lineWidth: 2,
-    },
-  };
-  const config2 = {
-    data,
-    angleField: "subTotal",
-    colorField: "customerName",
-    paddingRight: 80,
-    innerRadius: 0.6,
-    label: {
-      text: "customerName",
-      style: {
-        fontWeight: "bold",
-      },
-    },
-    legend: {
-      color: {
-        title: false,
-        position: "right",
-        rowPadding: 5,
-      },
-    },
-    annotations: [
-      {
-        type: "text",
-        style: {
-          text: "Toplam\nDeğer",
-          x: "50%",
-          y: "50%",
-          textAlign: "center",
-          fontSize: 40,
-          fontStyle: "bold",
-        },
-      },
-    ],
-  };
+
   const totalAmount = () => {
     const amount = data.reduce((total, item) => item.totalAmount + total, 0);
     return `${amount.toFixed(2)}₺`;
   };
+
+  const lineChartData = {
+    labels: data?.map((item) => item.customerName),
+    datasets: [
+      {
+        label: "SubTotal",
+        data: data?.map((item) => item.subTotal),
+        borderColor: "rgba(75, 192, 192, 1)",
+        borderWidth: 2,
+        fill: false,
+      },
+    ],
+  };
+
+  const pieChartData = {
+    labels: data?.map((item) => item.customerName),
+    datasets: [
+      {
+        data: data?.map((item) => item.subTotal),
+        backgroundColor: [
+          "#FF6384",
+          "#36A2EB",
+          "#FFCE56",
+          "#4BC0C0",
+          "#9966FF",
+          "#FF9F40",
+        ],
+        hoverBackgroundColor: [
+          "#FF6384",
+          "#36A2EB",
+          "#FFCE56",
+          "#4BC0C0",
+          "#9966FF",
+          "#FF9F40",
+        ],
+      },
+    ],
+  };
+
+  const pieChartOptions = {
+    maintainAspectRatio: false,
+    plugins: {
+      datalabels: {
+        color: "black",
+        formatter: (value, context) => {
+          return context.chart.data.labels[context.dataIndex];
+        },
+        font: {
+          weight: "bold",
+          size: 14,
+        },
+        textAlign: "center",
+      },
+      legend: {
+        display: true,
+        position: "right",
+        labels: {
+          color: "black",
+          font: {
+            size: 14,
+          },
+        },
+      },
+    },
+  };
+
   return (
     <>
       <Header />
@@ -124,11 +147,17 @@ const StatisticPage = () => {
               />
             </div>
             <div className="flex justify-between gap-10 lg:flex-row flex-col items-center">
-              <div className="lg:w-1/2 lg:h-80 h8h-80">
-                <Line {...config} />
+              <div className="lg:w-1/2 lg:h-80 h-80">
+                <Line data={lineChartData} />
               </div>
-              <div className="lg:w-1/2 lg:h-80 h-72">
-                <Pie {...config2} />
+              <div className="flex justify-center items-center w-full">
+                <div className="w-full max-w-lg h-96">
+                  <Pie
+                    data={pieChartData}
+                    options={pieChartOptions}
+                    plugins={[ChartDataLabels]}
+                  />
+                </div>
               </div>
             </div>
           </div>
@@ -142,4 +171,5 @@ const StatisticPage = () => {
     </>
   );
 };
+
 export default StatisticPage;
